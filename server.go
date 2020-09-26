@@ -26,5 +26,5 @@ func main() {
 }
 
 func PairDeviceHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(`{"status":"active"`))
+	w.Write([]byte(`{"status":"active"}`))
 }
