@@ -14,9 +14,9 @@ func TestCreatePairDevice(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/pair-device", payload)
 	rec := httptest.NewRecorder()
 
-	handler := &PairDeviceHandler{createPairDevice: func(p Pair) error {
+	handler := PairDeviceHandler(func(p Pair) error {
 		return nil
-	}}
+	})
 
 	handler.ServeHTTP(rec, req)
 
