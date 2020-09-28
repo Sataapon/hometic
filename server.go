@@ -20,7 +20,7 @@ type Pair struct {
 func main() {
 	fmt.Println("hello hometic : I'm Gopher!!")
 	r := mux.NewRouter()
-	r.Handle("/pair-device", PairDeviceHandler(createPairDevice{})).Methods(http.MethodPost)
+	r.Handle("/pair-device", PairDeviceHandler(CreatePairDevice(createPairDevice))).Methods(http.MethodPost)
 
 	addr := fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT"))
 	fmt.Println(addr)
@@ -59,10 +59,13 @@ type Device interface {
 	Pair(p Pair) error
 }
 
-type createPairDevice struct {
+type CreatePairDevice func(p Pair) error
+
+func (fn CreatePairDevice) Pair(p Pair) error {
+	return fn(p)
 }
 
-func (createPairDevice) Pair(p Pair) error {
+func createPairDevice(p Pair) error {
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
 		log.Fatal(err)
