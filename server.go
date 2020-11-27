@@ -30,7 +30,7 @@ func main() {
 	r := mux.NewRouter()
 	r.Use(logger.Middleware)
 
-	r.Handle("/pair-device", PairDeviceHandler(NewCreatePairDevice(db))).Methods(http.MethodPost)
+	r.Handle("/pair-device", CustomHandlerFunc(PairDeviceHandler(NewCreatePairDevice(db)))).Methods(http.MethodPost)
 
 	addr := fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT"))
 	fmt.Println(addr)
@@ -43,15 +43,34 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
-func PairDeviceHandler(device Device) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+type CustomResponseWriter interface {
+	JSON(statusCode int, data interface{})
+}
+
+type CustomHandlerFunc func(CustomResponseWriter, *http.Request)
+
+func (handler CustomHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	handler(&JSONResponseWriter{w}, r)
+}
+
+type JSONResponseWriter struct {
+	http.ResponseWriter
+}
+
+func (w *JSONResponseWriter) JSON(statusCode int, data interface{}) {
+	w.Header().Set("content-type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(data)
+}
+
+func PairDeviceHandler(device Device) func(w CustomResponseWriter, r *http.Request) {
+	return func(w CustomResponseWriter, r *http.Request) {
 		logger.L(r.Context()).Info("pair-device")
+
 		var p Pair
 		err := json.NewDecoder(r.Body).Decode(&p)
 		if err != nil {
-			w.Header().Set("content-type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(err.Error())
+			w.JSON(http.StatusBadRequest, err.Error())
 			return
 		}
 		defer r.Body.Close()
@@ -59,13 +78,10 @@ func PairDeviceHandler(device Device) http.HandlerFunc {
 
 		err = device.Pair(p)
 		if err != nil {
-			w.Header().Set("content-type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(err.Error())
+			w.JSON(http.StatusInternalServerError, err.Error())
 			return
 		}
-		w.Header().Set("content-type", "application/json")
-		w.Write([]byte(`{"status":"active"}`))
+		w.JSON(http.StatusOK, map[string]interface{}{"status": "active"})
 	}
 }
 
