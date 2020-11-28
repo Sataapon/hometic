@@ -20,11 +20,17 @@ type Pair struct {
 }
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal("can't start application", err)
+	}
+}
+
+func run() error {
 	fmt.Println("hello hometic : I'm Gopher!!")
 
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	r := mux.NewRouter()
@@ -40,7 +46,7 @@ func main() {
 		Handler: r,
 	}
 	log.Println("starting...")
-	log.Fatal(server.ListenAndServe())
+	return server.ListenAndServe()
 }
 
 type CustomResponseWriter interface {
